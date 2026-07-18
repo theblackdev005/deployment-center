@@ -10,6 +10,7 @@ use phpseclib3\Crypt\PublicKeyLoader;
 use phpseclib3\Net\SFTP;
 use phpseclib3\Net\SSH2;
 use RuntimeException;
+use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
 use Throwable;
 
@@ -69,16 +70,36 @@ class DeploymentRunner
                 copy($source.'/.env.example', $source.'/.env');
             }
 
-            $this->runProcess([
-                'composer', 'install', '--no-dev', '--prefer-dist', '--optimize-autoloader', '--no-interaction',
-            ], $source, 900);
+            $composer = (new ExecutableFinder)->find('composer');
+
+            if (! $composer) {
+                throw new RuntimeException('Composer est introuvable sur le serveur de déploiement.');
+            }
+
+            $this->runProcess(array_merge(
+                [$this->phpCliBinary(), $composer],
+                [
+                    'install', '--no-dev', '--prefer-dist', '--optimize-autoloader', '--no-interaction',
+                    '--ignore-platform-req=php',
+                ],
+            ), $source, 900);
         }
 
         if (is_file($source.'/package.json')) {
+            if (! is_file($source.'/package-lock.json')) {
+                $this->record($deployment, 'Fichiers frontend déjà fournis par le projet ; compilation ignorée.');
+
+                return;
+            }
+
             $this->record($deployment, 'Compilation des fichiers du site.');
-            $installCommand = is_file($source.'/package-lock.json') ? ['npm', 'ci'] : ['npm', 'install'];
-            $this->runProcess($installCommand, $source, 900);
-            $this->runProcess(['npm', 'run', 'build'], $source, 900);
+            $this->runProcess(['npm', 'ci'], $source, 900);
+
+            $buildScript = $this->frontendBuildScript($source.'/package.json');
+
+            if ($buildScript) {
+                $this->runProcess(['npm', 'run', $buildScript], $source, 900);
+            }
         }
     }
 
@@ -212,12 +233,46 @@ class DeploymentRunner
 
     private function runProcess(array $command, string $workingDirectory, int $timeout = 300, array $environment = []): void
     {
-        $process = new Process($command, $workingDirectory, $environment ?: null, null, $timeout);
+        $path = implode(PATH_SEPARATOR, array_unique(array_filter([
+            dirname($this->phpCliBinary()),
+            getenv('PATH') ?: null,
+        ])));
+        $environment = array_merge(['PATH' => $path], $environment);
+        $process = new Process($command, $workingDirectory, $environment, null, $timeout);
         $process->run();
 
         if (! $process->isSuccessful()) {
             throw new RuntimeException($this->cleanOutput($process->getErrorOutput() ?: $process->getOutput()));
         }
+    }
+
+    private function phpCliBinary(): string
+    {
+        if (! str_contains(strtolower(basename(PHP_BINARY)), 'fpm')) {
+            return PHP_BINARY;
+        }
+
+        $php = (new ExecutableFinder)->find('php');
+
+        if (! $php) {
+            throw new RuntimeException('PHP CLI est introuvable sur le serveur de déploiement.');
+        }
+
+        return $php;
+    }
+
+    private function frontendBuildScript(string $packageFile): ?string
+    {
+        $package = json_decode((string) file_get_contents($packageFile), true);
+        $scripts = is_array($package) ? ($package['scripts'] ?? []) : [];
+
+        foreach (['build', 'production', 'prod'] as $script) {
+            if (isset($scripts[$script])) {
+                return $script;
+            }
+        }
+
+        return null;
     }
 
     private function readCommitHash(string $source): ?string
