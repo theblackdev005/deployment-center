@@ -20,7 +20,6 @@
                             <div class="min-w-0">
                                 <div class="flex items-center gap-2">
                                     <h3 class="truncate text-sm font-semibold text-slate-950">{{ $project->name }}</h3>
-                                    <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{{ $project->branch }}</span>
                                 </div>
                                 <p class="mt-1 truncate text-sm text-slate-500">{{ $project->repository_url }}</p>
                                 <p class="mt-2 text-xs text-slate-400">{{ $project->deployments_count }} déploiement(s)</p>

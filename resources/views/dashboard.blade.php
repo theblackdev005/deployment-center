@@ -13,41 +13,21 @@
 
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <section class="mb-8 rounded-md border border-slate-200 bg-white p-5 sm:p-6">
-            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div class="max-w-xl">
-                    <p class="text-sm font-semibold text-slate-950">Déployer un projet</p>
-                    <p class="mt-1 text-sm text-slate-500">Choisissez le projet et le domaine. Deploy Center s’occupera du reste.</p>
-                </div>
-
-                @if ($projects->isNotEmpty() && $domains->isNotEmpty())
-                    <form method="POST" action="{{ route('deployments.store') }}" class="grid w-full gap-3 sm:grid-cols-2 lg:max-w-2xl lg:grid-cols-[220px_250px_auto]">
-                        @csrf
-                        <select name="project_id" required aria-label="Projet" class="w-full rounded-md border-slate-300 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">Projet</option>
-                            @foreach ($projects as $project)
-                                <option value="{{ $project->id }}">{{ $project->name }}</option>
-                            @endforeach
-                        </select>
-                        <select name="domain_id" required aria-label="Domaine" class="w-full rounded-md border-slate-300 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                            <option value="">Domaine</option>
-                            @foreach ($domains as $domain)
-                                <option value="{{ $domain->id }}">{{ $domain->name }}</option>
-                            @endforeach
-                        </select>
-                        <button class="rounded-md bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">Préparer</button>
-                    </form>
-                @else
-                    <a href="{{ route('setup.index') }}" class="inline-flex shrink-0 items-center justify-center rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">Terminer la configuration</a>
-                @endif
+            <div class="border-b border-slate-200 pb-4">
+                <p class="text-base font-semibold text-slate-950">Déployer un projet</p>
+                <p class="mt-1 text-sm text-slate-500">Collez l’accès SSH, indiquez le domaine, puis lancez le dépôt.</p>
+            </div>
+            <div class="mt-5">
+                @include('deployments._form')
             </div>
         </section>
 
         <div class="grid grid-cols-2 gap-px overflow-hidden rounded-md border border-slate-200 bg-slate-200 lg:grid-cols-4">
             @foreach ([
-                ['label' => 'Projets', 'value' => $projectCount, 'route' => 'projects.index'],
-                ['label' => 'Serveurs', 'value' => $serverCount, 'route' => 'servers.index'],
-                ['label' => 'Domaines', 'value' => $domainCount, 'route' => 'domains.index'],
-                ['label' => 'Déploiements', 'value' => $deploymentCount, 'route' => 'deployments.index'],
+                ['label' => 'Projets', 'value' => $projectCount, 'route' => 'setup.index'],
+                ['label' => 'Domaines utilisés', 'value' => $domainCount, 'route' => 'deployments.index'],
+                ['label' => 'Réussis', 'value' => $successfulDeploymentCount, 'route' => 'deployments.index'],
+                ['label' => 'À vérifier', 'value' => $failedDeploymentCount, 'route' => 'deployments.index'],
             ] as $stat)
                 <a href="{{ route($stat['route']) }}" class="bg-white p-5 hover:bg-slate-50">
                     <p class="text-sm text-slate-500">{{ $stat['label'] }}</p>

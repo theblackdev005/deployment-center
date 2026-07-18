@@ -6,6 +6,7 @@ use App\Models\Project;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProjectController extends Controller
@@ -37,6 +38,16 @@ class ProjectController extends Controller
             'name' => ['required', 'string', 'max:100'],
             'repository_url' => ['required', 'url', 'max:500'],
         ]);
+
+        $repositoryHost = strtolower((string) parse_url($validated['repository_url'], PHP_URL_HOST));
+
+        if (! in_array($repositoryHost, ['github.com', 'www.github.com'], true)
+            || parse_url($validated['repository_url'], PHP_URL_USER)
+            || parse_url($validated['repository_url'], PHP_URL_PASS)) {
+            throw ValidationException::withMessages([
+                'repository_url' => 'Utilisez un lien GitHub sans mot de passe ni jeton intégré.',
+            ]);
+        }
 
         Project::create([
             ...$validated,

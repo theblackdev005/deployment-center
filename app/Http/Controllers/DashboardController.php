@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Deployment;
 use App\Models\Domain;
 use App\Models\Project;
-use App\Models\Server;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -14,15 +13,15 @@ class DashboardController extends Controller
     {
         return view('dashboard', [
             'projectCount' => Project::count(),
-            'serverCount' => Server::count(),
             'domainCount' => Domain::count(),
             'deploymentCount' => Deployment::count(),
+            'successfulDeploymentCount' => Deployment::where('status', 'succeeded')->count(),
+            'failedDeploymentCount' => Deployment::where('status', 'failed')->count(),
             'recentDeployments' => Deployment::with(['project', 'domain'])
                 ->latest()
                 ->limit(8)
                 ->get(),
             'projects' => Project::where('is_active', true)->orderBy('name')->get(),
-            'domains' => Domain::with('server')->orderBy('name')->get(),
         ]);
     }
 }

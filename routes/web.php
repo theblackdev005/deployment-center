@@ -24,6 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/deployments', [DeploymentController::class, 'index'])->name('deployments.index');
     Route::get('/deployments/create', [DeploymentController::class, 'create'])->name('deployments.create');
     Route::post('/deployments', [DeploymentController::class, 'store'])->name('deployments.store');
+    Route::get('/deployments/{deployment}', [DeploymentController::class, 'show'])->name('deployments.show');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
