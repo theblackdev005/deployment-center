@@ -11,6 +11,7 @@
                     @foreach ([
                         ['route' => 'dashboard', 'label' => 'Vue d’ensemble', 'match' => 'dashboard'],
                         ['route' => 'deployments.index', 'label' => 'Déploiements', 'match' => 'deployments.*'],
+                        ['route' => 'hostinger.index', 'label' => 'Hostinger', 'match' => 'hostinger.*'],
                         ['route' => 'setup.index', 'label' => 'Configuration', 'match' => 'setup.*'],
                     ] as $item)
                         <a href="{{ route($item['route']) }}"
@@ -54,6 +55,7 @@
         <div class="space-y-1">
             <a href="{{ route('dashboard') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Vue d’ensemble</a>
             <a href="{{ route('deployments.index') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Déploiements</a>
+            <a href="{{ route('hostinger.index') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Hostinger</a>
             <a href="{{ route('setup.index') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Configuration</a>
             <a href="{{ route('deployments.create') }}" class="mt-2 block rounded-md bg-emerald-600 px-3 py-2 text-center text-sm font-semibold text-white">Nouveau déploiement</a>
         </div>

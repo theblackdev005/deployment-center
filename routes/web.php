@@ -3,6 +3,8 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeploymentController;
 use App\Http\Controllers\DomainController;
+use App\Http\Controllers\HostingerAccountController;
+use App\Http\Controllers\HostingerInventoryController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ServerController;
@@ -18,6 +20,13 @@ Route::get('/', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/configuration', SetupController::class)->name('setup.index');
+    Route::get('/hostinger', HostingerInventoryController::class)->name('hostinger.index');
+    Route::get('/hostinger/accounts', [HostingerAccountController::class, 'index'])->name('hostinger.accounts.index');
+    Route::post('/hostinger/accounts', [HostingerAccountController::class, 'store'])->name('hostinger.accounts.store');
+    Route::patch('/hostinger/accounts/{hostingerAccount}', [HostingerAccountController::class, 'update'])->name('hostinger.accounts.update');
+    Route::post('/hostinger/accounts/sync-all', [HostingerAccountController::class, 'syncAll'])->name('hostinger.accounts.sync-all');
+    Route::post('/hostinger/accounts/{hostingerAccount}/sync', [HostingerAccountController::class, 'sync'])->name('hostinger.accounts.sync');
+    Route::delete('/hostinger/accounts/{hostingerAccount}', [HostingerAccountController::class, 'destroy'])->name('hostinger.accounts.destroy');
     Route::resource('projects', ProjectController::class)->only(['index', 'store', 'destroy']);
     Route::resource('servers', ServerController::class)->only(['index', 'store', 'destroy']);
     Route::resource('domains', DomainController::class)->only(['index', 'store', 'destroy']);
