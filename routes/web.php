@@ -44,7 +44,7 @@ Route::middleware(['auth', 'verified', 'two-factor.configured'])->group(function
     Route::post('/hostinger/accounts/sync-all', [HostingerAccountController::class, 'syncAll'])->name('hostinger.accounts.sync-all');
     Route::post('/hostinger/accounts/{hostingerAccount}/sync', [HostingerAccountController::class, 'sync'])->name('hostinger.accounts.sync');
     Route::delete('/hostinger/accounts/{hostingerAccount}', [HostingerAccountController::class, 'destroy'])->name('hostinger.accounts.destroy');
-    Route::resource('projects', ProjectController::class)->only(['index', 'store', 'destroy']);
+    Route::resource('projects', ProjectController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('servers', ServerController::class)->only(['index', 'store', 'destroy']);
     Route::resource('domains', DomainController::class)->only(['index', 'store', 'destroy']);
     Route::get('/deployments', [DeploymentController::class, 'index'])->name('deployments.index');

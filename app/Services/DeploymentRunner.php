@@ -28,12 +28,20 @@ class DeploymentRunner
             $archive = $workspace.'/release.tar.gz';
 
             $this->record($deployment, 'Téléchargement du projet depuis GitHub.');
-            $this->runProcess([
+            $cloneCommand = [
                 'git', 'clone', '--depth', '1', '--single-branch', '--branch',
                 $deployment->project->branch,
                 $deployment->project->repository_url,
                 $source,
-            ], dirname($source));
+            ];
+
+            if (filled($deployment->project->github_token)) {
+                array_splice($cloneCommand, 1, 0, [
+                    '-c', 'http.extraHeader=Authorization: Basic '.base64_encode('x-access-token:'.$deployment->project->github_token),
+                ]);
+            }
+
+            $this->runProcess($cloneCommand, dirname($source));
 
             $this->prepareDependencies($deployment, $source);
             $this->removeLocalConfiguration($source);
@@ -141,6 +149,7 @@ class DeploymentRunner
         $remoteArchive = $remoteBase.'/uploads/deployment-'.$deployment->id.'.tar.gz';
         $releasePath = $remoteBase.'/releases/deployment-'.$deployment->id;
         $backupPath = $remoteBase.'/backups/'.$deployment->domain->name.'/'.now()->format('Ymd-His').'.tar.gz';
+        $runtimePath = $remoteBase.'/runtime/deployment-'.$deployment->id;
         $ssh = new SSH2($server->host, $server->port, 20);
 
         if (! $ssh->login($server->username, $privateKey)) {
@@ -164,15 +173,44 @@ class DeploymentRunner
             $this->record($deployment, 'Sauvegarde de la version précédente : '.$backupPath);
         }
 
+        $previousProjectId = Deployment::query()
+            ->where('domain_id', $deployment->domain_id)
+            ->where('id', '!=', $deployment->id)
+            ->where('status', 'succeeded')
+            ->latest('id')
+            ->value('project_id');
+        $replacingProject = $previousProjectId !== null && (int) $previousProjectId !== (int) $deployment->project_id;
+
+        if ($replacingProject) {
+            $this->record($deployment, 'Remplacement complet de l’ancien projet après sauvegarde.');
+        }
+
+        $preserveRuntimeCommand = '';
+        $restoreRuntimeCommand = '';
+
+        if (! $replacingProject && $existingFiles && ! $isHostingerPlaceholder) {
+            $preserveRuntimeCommand = 'mkdir -p '.escapeshellarg($runtimePath)
+                .' && if [ -f '.escapeshellarg($target.'/.env').' ]; then cp '.escapeshellarg($target.'/.env').' '.escapeshellarg($runtimePath.'/.env').'; fi'
+                .' && if [ -d '.escapeshellarg($target.'/storage/app').' ]; then cp -a '.escapeshellarg($target.'/storage/app').' '.escapeshellarg($runtimePath.'/storage-app').'; fi'
+                .' && if [ -d '.escapeshellarg($target.'/public/branding').' ]; then cp -a '.escapeshellarg($target.'/public/branding').' '.escapeshellarg($runtimePath.'/branding').'; fi'
+                .' && ';
+
+            $restoreRuntimeCommand = ' && if [ -f '.escapeshellarg($runtimePath.'/.env').' ]; then cp '.escapeshellarg($runtimePath.'/.env').' '.escapeshellarg($target.'/.env').'; fi'
+                .' && if [ -d '.escapeshellarg($runtimePath.'/storage-app').' ]; then rm -rf '.escapeshellarg($target.'/storage/app').'; mkdir -p '.escapeshellarg($target.'/storage').'; cp -a '.escapeshellarg($runtimePath.'/storage-app').' '.escapeshellarg($target.'/storage/app').'; fi'
+                .' && if [ -d '.escapeshellarg($runtimePath.'/branding').' ]; then mkdir -p '.escapeshellarg($target.'/public').'; rm -rf '.escapeshellarg($target.'/public/branding').'; cp -a '.escapeshellarg($runtimePath.'/branding').' '.escapeshellarg($target.'/public/branding').'; fi';
+        }
+
         $publishCommand = $backupCommand
+            .$preserveRuntimeCommand
             .'tar -xzf '.escapeshellarg($remoteArchive).' -C '.escapeshellarg($releasePath)
             .' && test -f '.escapeshellarg($releasePath.'/artisan')
             .' && test -f '.escapeshellarg($releasePath.'/public/index.php')
-            .' && rm -f '.escapeshellarg($target.'/default.php')
+            .' && find '.escapeshellarg($target).' -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +'
             .' && cp -a '.escapeshellarg($releasePath.'/.').' '.escapeshellarg($target.'/')
+            .$restoreRuntimeCommand
             .' && mkdir -p '.escapeshellarg($target.'/storage/framework/cache/data').' '.escapeshellarg($target.'/storage/framework/sessions').' '.escapeshellarg($target.'/storage/framework/views').' '.escapeshellarg($target.'/storage/logs').' '.escapeshellarg($target.'/bootstrap/cache')
             .' && chmod -R u+rwX '.escapeshellarg($target.'/storage').' '.escapeshellarg($target.'/bootstrap/cache')
-            .' && rm -rf '.escapeshellarg($releasePath).' '.escapeshellarg($remoteArchive);
+            .' && rm -rf '.escapeshellarg($releasePath).' '.escapeshellarg($remoteArchive).' '.escapeshellarg($runtimePath);
 
         $output = $ssh->exec($publishCommand);
 

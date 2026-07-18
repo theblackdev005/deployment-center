@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->dontFlash([
             'ssh_password', 'api_token', 'password', 'password_confirmation', 'current_password',
             'code', 'recovery_code',
+            'github_token',
         ]);
 
         $exceptions->shouldRenderJsonWhen(

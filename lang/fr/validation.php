@@ -167,5 +167,6 @@ return [
         'domain' => 'nom de domaine',
         'client_name' => 'nom du client',
         'github_url' => 'projet GitHub',
+        'github_token' => 'jeton GitHub',
     ],
 ];

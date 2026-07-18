@@ -25,14 +25,40 @@
                                 </div>
                                 <p class="mt-1 truncate text-sm text-slate-500">{{ $project->repository_url }}</p>
                                 <p class="mt-2 text-xs text-slate-400">{{ $project->deployments_count }} {{ $project->deployments_count > 1 ? 'publications' : 'publication' }}</p>
+                                <p class="mt-1 text-xs font-semibold {{ filled($project->github_token) ? 'text-emerald-700' : 'text-amber-700' }}">
+                                    {{ filled($project->github_token) ? 'Accès privé configuré' : 'Dépôt public ou accès privé à configurer' }}
+                                </p>
                             </div>
-                            <form method="POST" action="{{ route('projects.destroy', $project) }}" onsubmit="return confirm('Supprimer ce projet ?')">
-                                @csrf
-                                @method('DELETE')
-                                <button class="ui-button-danger">Supprimer</button>
-                            </form>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" class="ui-button-secondary" onclick="document.getElementById('github-access-{{ $project->id }}').showModal()">Accès GitHub</button>
+                                <form method="POST" action="{{ route('projects.destroy', $project) }}" onsubmit="return confirm('Supprimer ce projet ?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="ui-button-danger">Supprimer</button>
+                                </form>
+                            </div>
                         </div>
                     </article>
+                    <dialog id="github-access-{{ $project->id }}" class="w-[min(92vw,480px)] rounded-lg border border-slate-200 p-0 shadow-xl backdrop:bg-slate-950/40">
+                        <form method="POST" action="{{ route('projects.update', $project) }}" class="p-5">
+                            @csrf
+                            @method('PATCH')
+                            <h3 class="text-base font-bold text-slate-950">Accès GitHub privé</h3>
+                            <p class="mt-1 text-sm text-slate-500">Ajoutez un jeton GitHub avec un accès en lecture au contenu de ce dépôt.</p>
+                            <div class="mt-5">
+                                <label for="github_token_{{ $project->id }}" class="ui-label">Jeton GitHub</label>
+                                <input id="github_token_{{ $project->id }}" name="github_token" type="password" autocomplete="new-password" class="ui-input" placeholder="github_pat_…">
+                                <p class="mt-2 text-xs text-slate-500">Le jeton est chiffré avant son enregistrement.</p>
+                            </div>
+                            @if(filled($project->github_token))
+                                <label class="mt-4 flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" name="remove_github_token" value="1" class="rounded border-slate-300"> Supprimer le jeton existant</label>
+                            @endif
+                            <div class="mt-5 flex justify-end gap-2">
+                                <button type="button" class="ui-button-secondary" onclick="this.closest('dialog').close()">Annuler</button>
+                                <button class="ui-button-primary">Enregistrer</button>
+                            </div>
+                        </form>
+                    </dialog>
                 @empty
                     <div class="rounded-md border border-dashed border-slate-300 px-5 py-10 text-center text-sm text-slate-500">Aucun projet enregistré.</div>
                 @endforelse
@@ -55,6 +81,12 @@
                         <label for="repository_url" class="ui-label">Adresse du dépôt GitHub</label>
                         <input id="repository_url" name="repository_url" type="url" value="{{ old('repository_url') }}" required class="ui-input" placeholder="https://github.com/organisation/projet">
                         <x-input-error :messages="$errors->get('repository_url')" class="mt-2" />
+                    </div>
+                    <div>
+                        <label for="github_token" class="ui-label">Jeton GitHub <span class="font-normal text-slate-400">(dépôt privé)</span></label>
+                        <input id="github_token" name="github_token" type="password" autocomplete="new-password" class="ui-input" placeholder="Facultatif">
+                        <p class="mt-2 text-xs text-slate-500">Nécessaire uniquement pour un dépôt privé.</p>
+                        <x-input-error :messages="$errors->get('github_token')" class="mt-2" />
                     </div>
                 </div>
 
