@@ -5,12 +5,14 @@ namespace Tests\Feature;
 use App\Models\HostingerAccount;
 use App\Models\HostingerAlert;
 use App\Models\HostingerDomain;
+use App\Models\HostingerHostingPlan;
 use App\Models\HostingerWebsite;
 use App\Models\User;
 use App\Notifications\HostingerProblemDetected;
 use App\Services\HostingerAlertService;
 use App\Services\HostingerSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
@@ -57,6 +59,24 @@ class HostingerSyncTest extends TestCase
                 'created_at' => '2025-01-01T00:00:00Z',
                 'expires_at' => '2027-01-01T00:00:00Z',
             ]]),
+            '*/api/hosting/v1/orders*' => Http::response([
+                'data' => [[
+                    'id' => 20,
+                    'subscription_id' => 'hosting-subscription-1',
+                    'created_at' => '2025-01-01T00:00:00Z',
+                    'plan' => ['name' => 'Business Web Hosting'],
+                    'status' => 'active',
+                ]],
+                'meta' => ['current_page' => 1, 'per_page' => 100, 'total' => 1],
+            ]),
+            '*/api/billing/v1/subscriptions' => Http::response([[
+                'id' => 'hosting-subscription-1',
+                'name' => 'Business Web Hosting',
+                'status' => 'active',
+                'created_at' => '2025-01-01T00:00:00Z',
+                'expires_at' => null,
+                'next_billing_at' => '2027-06-01T00:00:00Z',
+            ]]),
         ]);
 
         $account = HostingerAccount::create([
@@ -76,6 +96,13 @@ class HostingerSyncTest extends TestCase
             'domain' => 'example.com',
             'status' => 'active',
         ]);
+        $this->assertDatabaseHas('hostinger_hosting_plans', [
+            'hostinger_account_id' => $account->id,
+            'order_id' => 20,
+            'subscription_id' => 'hosting-subscription-1',
+            'name' => 'Business Web Hosting',
+        ]);
+        $this->assertSame('2027-06-01', HostingerHostingPlan::first()->expires_at->format('Y-m-d'));
         $this->assertSame('connected', $account->fresh()->status);
 
         $user = User::factory()->create();
@@ -112,6 +139,50 @@ class HostingerSyncTest extends TestCase
         $this->assertDatabaseCount('hostinger_alerts', 2);
         $this->assertSame(2, HostingerAlert::where('status', 'open')->count());
         $this->assertCount(2, Notification::sent($admin, HostingerProblemDetected::class));
+
+        HostingerDomain::where('hostinger_account_id', $account->id)->update(['status' => 'active']);
+        HostingerWebsite::where('hostinger_account_id', $account->id)->update(['is_enabled' => true]);
+        $service->reconcile($account->fresh());
+
+        $this->assertSame(0, HostingerAlert::where('status', 'open')->count());
+    }
+
+    public function test_expiration_alerts_start_two_months_before_the_expiration_date(): void
+    {
+        Notification::fake();
+        Carbon::setTestNow('2026-07-18 12:00:00');
+
+        $account = HostingerAccount::create([
+            'name' => 'Compte principal',
+            'api_token' => 'hostinger-secret-token',
+            'status' => 'connected',
+        ]);
+        HostingerDomain::create([
+            'hostinger_account_id' => $account->id,
+            'domain' => 'expires-soon.com',
+            'status' => 'active',
+            'expires_at' => now()->addMonthsNoOverflow(2),
+        ]);
+        HostingerDomain::create([
+            'hostinger_account_id' => $account->id,
+            'domain' => 'expires-later.com',
+            'status' => 'active',
+            'expires_at' => now()->addMonthsNoOverflow(2)->addDay(),
+        ]);
+
+        app(HostingerAlertService::class)->reconcile($account);
+
+        $this->assertDatabaseHas('hostinger_alerts', [
+            'domain' => 'expires-soon.com',
+            'type' => 'domain_expiring',
+            'status' => 'open',
+        ]);
+        $this->assertDatabaseMissing('hostinger_alerts', [
+            'domain' => 'expires-later.com',
+            'type' => 'domain_expiring',
+        ]);
+
+        Carbon::setTestNow();
     }
 
     public function test_hostinger_pages_require_authentication_and_tokens_are_not_flashed(): void
@@ -124,14 +195,105 @@ class HostingerSyncTest extends TestCase
             ->assertSee('Connectez votre premier compte Hostinger');
         $this->actingAs($user)->get(route('hostinger.accounts.index'))
             ->assertOk()
-            ->assertSee('Ajouter un compte');
+            ->assertSee('Connecter un compte');
 
         $response = $this->actingAs($user)->post(route('hostinger.accounts.store'), [
             'name' => '',
+            'email' => 'admin@example.com',
             'api_token' => 'hostinger-secret-token',
         ]);
 
         $response->assertSessionHasErrors('name');
         $this->assertArrayNotHasKey('api_token', session('_old_input', []));
+    }
+
+    public function test_each_active_account_is_available_in_the_account_summary_selector(): void
+    {
+        $user = User::factory()->create();
+        $first = HostingerAccount::create([
+            'name' => 'Compte Alpha',
+            'email' => 'alpha@example.com',
+            'api_token' => 'alpha-token',
+            'status' => 'connected',
+            'last_synced_at' => '2026-07-18 10:00:00',
+        ]);
+        $second = HostingerAccount::create([
+            'name' => 'Compte Beta',
+            'email' => 'beta@example.com',
+            'api_token' => 'beta-token',
+            'status' => 'connected',
+            'last_synced_at' => '2026-07-18 11:00:00',
+        ]);
+        HostingerHostingPlan::create([
+            'hostinger_account_id' => $first->id,
+            'order_id' => 101,
+            'name' => 'Alpha Hosting',
+            'status' => 'active',
+            'expires_at' => '2027-01-10 00:00:00',
+        ]);
+        HostingerHostingPlan::create([
+            'hostinger_account_id' => $second->id,
+            'order_id' => 202,
+            'name' => 'Beta Hosting',
+            'status' => 'active',
+            'expires_at' => '2027-02-20 00:00:00',
+        ]);
+
+        $this->actingAs($user)->get(route('hostinger.index'))
+            ->assertOk()
+            ->assertSee('Compte Alpha')
+            ->assertSee('alpha@example.com')
+            ->assertSee('Compte Beta')
+            ->assertSee('beta@example.com')
+            ->assertSee('10/01/2027')
+            ->assertSee('20/02/2027')
+            ->assertSee('Choisissez le compte Hostinger que vous souhaitez consulter.');
+    }
+
+    public function test_account_can_be_paused_and_reactivated_without_losing_its_data(): void
+    {
+        $user = User::factory()->create();
+        $account = HostingerAccount::create([
+            'name' => 'Compte principal',
+            'api_token' => 'hostinger-secret-token',
+            'status' => 'connected',
+        ]);
+        HostingerDomain::create([
+            'hostinger_account_id' => $account->id,
+            'domain' => 'example.com',
+            'status' => 'suspended',
+        ]);
+        app(HostingerAlertService::class)->reconcile($account);
+
+        $this->actingAs($user)
+            ->patch(route('hostinger.accounts.status', $account), ['is_active' => false])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertFalse($account->fresh()->is_active);
+        $this->assertDatabaseHas('hostinger_domains', ['domain' => 'example.com']);
+        $this->assertDatabaseMissing('hostinger_alerts', [
+            'hostinger_account_id' => $account->id,
+            'status' => 'open',
+        ]);
+        $this->actingAs($user)
+            ->get(route('hostinger.index'))
+            ->assertOk()
+            ->assertDontSee('example.com');
+        $this->actingAs($user)
+            ->get(route('hostinger.accounts.index'))
+            ->assertOk()
+            ->assertSee('Informations masquées jusqu’à la réactivation du compte.');
+
+        $this->actingAs($user)
+            ->post(route('hostinger.accounts.sync', $account))
+            ->assertSessionHas('error');
+
+        $this->actingAs($user)
+            ->patch(route('hostinger.accounts.status', $account), ['is_active' => true])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertTrue($account->fresh()->is_active);
     }
 }

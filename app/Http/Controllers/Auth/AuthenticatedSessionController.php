@@ -28,6 +28,16 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        if ($request->user()->hasTwoFactorAuthentication()) {
+            $request->session()->put('two_factor_login', [
+                'user_id' => $request->user()->id,
+                'remember' => false,
+            ]);
+            Auth::guard('web')->logout();
+
+            return redirect()->route('two-factor.challenge');
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

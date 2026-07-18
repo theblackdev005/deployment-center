@@ -6,6 +6,7 @@ use App\Models\Deployment;
 use App\Models\HostingerAccount;
 use App\Models\HostingerAlert;
 use App\Models\HostingerDomain;
+use App\Models\HostingerHostingPlan;
 use App\Models\HostingerWebsite;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -14,9 +15,18 @@ class HostingerInventoryController extends Controller
 {
     public function __invoke(): View
     {
-        $accounts = HostingerAccount::withCount(['websites', 'domains'])->orderBy('name')->get();
-        $websites = HostingerWebsite::with('account')->get();
-        $registeredDomains = HostingerDomain::with('account')->get();
+        $accounts = HostingerAccount::with([
+            'hostingPlans' => fn ($query) => $query->whereNotNull('expires_at')->orderBy('expires_at'),
+        ])->withCount([
+            'websites',
+            'domains',
+            'alerts as open_alerts_count' => fn ($query) => $query->where('status', 'open'),
+        ])->orderBy('name')->get();
+        $expirationNoticeMonths = (int) config('services.hostinger.expiration_notice_months', 2);
+        $activeAccountIds = $accounts->where('is_active', true)->pluck('id');
+        $websites = HostingerWebsite::with('account')->whereIn('hostinger_account_id', $activeAccountIds)->get();
+        $registeredDomains = HostingerDomain::with('account')->whereIn('hostinger_account_id', $activeAccountIds)->get();
+        $hostingPlans = HostingerHostingPlan::with('account')->whereIn('hostinger_account_id', $activeAccountIds)->get();
         $domains = $this->mergeDomains($websites, $registeredDomains)->sortBy('domain')->values();
 
         $latestDeployments = Deployment::with(['project', 'domain'])
@@ -28,16 +38,21 @@ class HostingerInventoryController extends Controller
 
         $domains = $domains->map(function (array $row) use ($latestDeployments) {
             $row['deployment'] = $latestDeployments->get($row['domain']);
+            $row['is_subdomain'] = $row['website']?->vhost_type === 'subdomain';
 
             return $row;
         });
 
+        $mainDomains = $domains->where('is_subdomain', false)->values();
+        $subdomainCount = $domains->where('is_subdomain', true)->count();
+        $lastSyncedAt = $accounts->pluck('last_synced_at')->filter()->sortDesc()->first();
         $expiringDomains = $registeredDomains
-            ->filter(fn (HostingerDomain $domain) => $domain->expires_at?->isBetween(now(), now()->addDays(30)))
+            ->filter(fn (HostingerDomain $domain) => $domain->account?->is_active && $domain->expires_at?->isBetween(now(), now()->addMonthsNoOverflow($expirationNoticeMonths)))
             ->sortBy('expires_at')
             ->values();
         $alerts = HostingerAlert::with('account')
             ->where('status', 'open')
+            ->whereHas('account', fn ($query) => $query->where('is_active', true))
             ->orderByRaw("CASE WHEN severity = 'critical' THEN 0 ELSE 1 END")
             ->latest('last_detected_at')
             ->get();
@@ -47,7 +62,11 @@ class HostingerInventoryController extends Controller
             'domains' => $domains,
             'expiringDomains' => $expiringDomains,
             'alerts' => $alerts,
-            'domainCount' => $domains->count(),
+            'openAlertCount' => $alerts->count(),
+            'domainCount' => $mainDomains->count(),
+            'subdomainCount' => $subdomainCount,
+            'lastSyncedAt' => $lastSyncedAt,
+            'expirationNoticeMonths' => $expirationNoticeMonths,
         ]);
     }
 

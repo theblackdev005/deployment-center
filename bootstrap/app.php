@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureTwoFactorConfigured;
+use App\Http\Middleware\InstallationMiddleware;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,10 +15,21 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->trustHosts(
+            at: fn () => is_file(storage_path('app/installed.lock')) ? config('security.trusted_hosts') : ['.*'],
+            subdomains: false,
+        );
+        $middleware->prependToGroup('web', InstallationMiddleware::class);
+        $middleware->appendToGroup('web', SecurityHeaders::class);
+        $middleware->alias([
+            'two-factor.configured' => EnsureTwoFactorConfigured::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->dontFlash(['ssh_password', 'api_token']);
+        $exceptions->dontFlash([
+            'ssh_password', 'api_token', 'password', 'password_confirmation', 'current_password',
+            'code', 'recovery_code',
+        ]);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),

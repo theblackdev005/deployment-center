@@ -17,7 +17,7 @@ class SyncHostingerAccounts extends Command
     {
         $failed = false;
 
-        foreach (HostingerAccount::all() as $account) {
+        foreach (HostingerAccount::where('is_active', true)->get() as $account) {
             try {
                 $sync->sync($account);
                 $this->info($account->name.' synchronisé.');

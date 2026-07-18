@@ -2,15 +2,16 @@
     <x-slot name="header">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p class="text-sm font-medium text-emerald-700">Historique</p>
-                <h1 class="mt-1 text-2xl font-semibold text-slate-950">Déploiements</h1>
+                <p class="ui-eyebrow">Historique</p>
+                <h1 class="mt-1 text-2xl font-bold text-slate-950">Déploiements</h1>
+                <p class="mt-1 text-sm text-slate-500">Suivez chaque publication et intervenez uniquement lorsque nécessaire.</p>
             </div>
-            <a href="{{ route('deployments.create') }}" class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">Nouveau déploiement</a>
+            <a href="{{ route('deployments.create') }}" class="ui-button-primary"><i data-lucide="rocket" class="h-4 w-4" aria-hidden="true"></i>Nouveau déploiement</a>
         </div>
     </x-slot>
 
     <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div class="overflow-hidden rounded-md border border-slate-200 bg-white">
+        <div class="ui-panel overflow-hidden">
             @forelse ($deployments as $deployment)
                 @php
                     $status = match ($deployment->status) {
@@ -22,8 +23,8 @@
                 @endphp
                 <div class="grid gap-3 border-b border-slate-100 px-4 py-4 last:border-0 hover:bg-slate-50 sm:grid-cols-[minmax(0,1fr)_150px_100px_120px] sm:items-center">
                     <div class="min-w-0">
-                        <a href="{{ route('deployments.show', $deployment) }}" class="truncate text-sm font-semibold text-slate-950 hover:text-emerald-700">{{ $deployment->project->name }} vers {{ $deployment->domain->name }}</a>
-                        <p class="mt-1 text-xs text-slate-500">Créé par {{ $deployment->user?->name ?? 'Système' }} le {{ $deployment->created_at->format('d/m/Y à H:i') }}</p>
+                        <a href="{{ route('deployments.show', $deployment) }}" class="truncate text-sm font-bold text-slate-950 hover:text-[#673de6]">{{ $deployment->project->name }} vers {{ $deployment->domain->name }}</a>
+                        <p class="mt-1 text-xs text-slate-500">Lancé par {{ $deployment->user?->name ?? 'Système' }} le {{ $deployment->created_at->format('d/m/Y à H:i') }}</p>
                     </div>
                     <p class="text-sm text-slate-500">{{ $deployment->commit_hash ? substr($deployment->commit_hash, 0, 8) : 'Version actuelle' }}</p>
                     <span class="w-fit rounded-full px-2.5 py-1 text-xs font-semibold {{ $status['class'] }}">{{ $status['label'] }}</span>
@@ -31,17 +32,17 @@
                         @if (in_array($deployment->status, ['failed', 'pending'], true))
                             <form method="POST" action="{{ route('deployments.retry', $deployment) }}" onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Relance...';">
                                 @csrf
-                                <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-md border border-emerald-600 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60">Relancer</button>
+                                <button type="submit" class="ui-button-secondary">Relancer</button>
                             </form>
                         @else
-                            <a href="{{ route('deployments.show', $deployment) }}" class="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white">Voir</a>
+                            <a href="{{ route('deployments.show', $deployment) }}" class="ui-button-secondary">Consulter</a>
                         @endif
                     </div>
                 </div>
             @empty
                 <div class="px-5 py-12 text-center">
-                    <p class="text-sm font-medium text-slate-700">Aucun déploiement enregistré</p>
-                    <p class="mt-1 text-sm text-slate-500">Préparez votre première publication lorsque les cibles sont configurées.</p>
+                    <p class="text-sm font-semibold text-slate-700">Aucun déploiement enregistré</p>
+                    <p class="mt-1 text-sm text-slate-500">Les publications effectuées apparaîtront dans cet historique.</p>
                 </div>
             @endforelse
         </div>

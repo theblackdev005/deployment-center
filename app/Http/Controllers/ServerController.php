@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Server;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ServerController extends Controller
@@ -14,8 +15,14 @@ class ServerController extends Controller
      */
     public function index(): View
     {
+        $servers = Server::withCount('domains')->orderBy('name')->get();
+        $servers->each(fn (Server $server) => $server->setAttribute(
+            'connection_ready',
+            filled($server->ssh_key_path) && Storage::disk('local')->exists($server->ssh_key_path),
+        ));
+
         return view('servers.index', [
-            'servers' => Server::withCount('domains')->orderBy('name')->get(),
+            'servers' => $servers,
         ]);
     }
 

@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Models\HostingerAccount;
 use App\Models\HostingerDomain;
+use App\Models\HostingerHostingPlan;
 use App\Models\HostingerWebsite;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Throwable;
 
 class HostingerSyncService
@@ -15,17 +17,24 @@ class HostingerSyncService
 
     public function sync(HostingerAccount $account): void
     {
+        if (! $account->is_active) {
+            throw new RuntimeException('Ce compte Hostinger est en pause. Réactivez-le avant de lancer une synchronisation.');
+        }
+
         $account->update(['status' => 'syncing', 'sync_error' => null]);
 
         try {
             $client = new HostingerApiClient($account->api_token);
             $websites = $client->websites();
             $domains = $client->domains();
+            $orders = $client->hostingOrders();
+            $subscriptions = $client->subscriptions();
             $syncedAt = now();
 
-            DB::transaction(function () use ($account, $websites, $domains, $syncedAt) {
+            DB::transaction(function () use ($account, $websites, $domains, $orders, $subscriptions, $syncedAt) {
                 $this->syncWebsites($account, $websites, $syncedAt);
                 $this->syncDomains($account, $domains, $syncedAt);
+                $this->syncHostingPlans($account, $orders, $subscriptions, $syncedAt);
             });
 
             $account->update([
@@ -102,6 +111,43 @@ class HostingerSyncService
 
         $query = HostingerDomain::where('hostinger_account_id', $account->id);
         $seen ? $query->whereNotIn('domain', $seen)->delete() : $query->delete();
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $orders
+     * @param  array<int, array<string, mixed>>  $subscriptions
+     */
+    private function syncHostingPlans(HostingerAccount $account, array $orders, array $subscriptions, Carbon $syncedAt): void
+    {
+        $subscriptionsById = collect($subscriptions)->keyBy(fn (array $item) => (string) ($item['id'] ?? ''));
+        $seen = [];
+
+        foreach ($orders as $order) {
+            $orderId = (int) ($order['id'] ?? 0);
+
+            if ($orderId <= 0) {
+                continue;
+            }
+
+            $seen[] = $orderId;
+            $subscriptionId = (string) ($order['subscription_id'] ?? '');
+            $subscription = $subscriptionsById->get($subscriptionId, []);
+
+            HostingerHostingPlan::updateOrCreate(
+                ['hostinger_account_id' => $account->id, 'order_id' => $orderId],
+                [
+                    'subscription_id' => $subscriptionId ?: null,
+                    'name' => $order['plan']['name'] ?? $subscription['name'] ?? null,
+                    'status' => $order['status'] ?? $subscription['status'] ?? null,
+                    'remote_created_at' => $this->date($order['created_at'] ?? $subscription['created_at'] ?? null),
+                    'expires_at' => $this->date($subscription['expires_at'] ?? $subscription['next_billing_at'] ?? null),
+                    'last_synced_at' => $syncedAt,
+                ],
+            );
+        }
+
+        $query = HostingerHostingPlan::where('hostinger_account_id', $account->id);
+        $seen ? $query->whereNotIn('order_id', $seen)->delete() : $query->delete();
     }
 
     private function date(mixed $value): ?Carbon

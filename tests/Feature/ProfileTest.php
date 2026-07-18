@@ -64,6 +64,7 @@ class ProfileTest extends TestCase
     public function test_user_can_delete_their_account(): void
     {
         $user = User::factory()->create();
+        User::factory()->create();
 
         $response = $this
             ->actingAs($user)
@@ -82,6 +83,7 @@ class ProfileTest extends TestCase
     public function test_correct_password_must_be_provided_to_delete_account(): void
     {
         $user = User::factory()->create();
+        User::factory()->create();
 
         $response = $this
             ->actingAs($user)

@@ -37,6 +37,7 @@ return [
 
     'hostinger' => [
         'base_url' => env('HOSTINGER_API_URL', 'https://developers.hostinger.com'),
+        'expiration_notice_months' => 2,
     ],
 
 ];

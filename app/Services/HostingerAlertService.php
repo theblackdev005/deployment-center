@@ -7,13 +7,23 @@ use App\Models\HostingerAlert;
 use App\Models\User;
 use App\Notifications\HostingerProblemDetected;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Throwable;
 
 class HostingerAlertService
 {
     public function reconcile(HostingerAccount $account): void
     {
-        $account->loadMissing(['domains', 'websites']);
+        if (! $account->is_active) {
+            HostingerAlert::where('hostinger_account_id', $account->id)
+                ->where('status', 'open')
+                ->update(['status' => 'resolved', 'resolved_at' => now()]);
+
+            return;
+        }
+
+        $account->loadMissing(['domains', 'websites', 'hostingPlans']);
+        $expirationNoticeMonths = (int) config('services.hostinger.expiration_notice_months', 2);
         $issues = [];
 
         foreach ($account->domains as $domain) {
@@ -28,7 +38,7 @@ class HostingerAlertService
                     'Domaine expiré : '.$domain->domain,
                     'Le domaine '.$domain->domain.' est arrivé à expiration.',
                 );
-            } elseif ($domain->expires_at?->isBetween(now(), now()->addDays(30))) {
+            } elseif ($domain->expires_at?->isBetween(now(), now()->addMonthsNoOverflow($expirationNoticeMonths))) {
                 $issues[] = $this->issue(
                     $account,
                     'domain_expiring',
@@ -60,6 +70,30 @@ class HostingerAlertService
                 'Site désactivé : '.$website->domain,
                 'Le site '.$website->domain.' est actuellement signalé comme désactivé par Hostinger.',
             );
+        }
+
+        foreach ($account->hostingPlans as $plan) {
+            $planName = Str::of($plan->name ?: 'Hébergement Hostinger')->replace('_', ' ')->title();
+
+            if ($plan->expires_at?->isPast()) {
+                $issues[] = $this->issue(
+                    $account,
+                    'hosting_expired',
+                    'hosting-'.$plan->order_id,
+                    'critical',
+                    'Hébergement arrivé à expiration',
+                    'L’offre '.$planName.' est arrivée à expiration le '.$plan->expires_at->format('d/m/Y').'.',
+                );
+            } elseif ($plan->expires_at?->isBetween(now(), now()->addMonthsNoOverflow($expirationNoticeMonths))) {
+                $issues[] = $this->issue(
+                    $account,
+                    'hosting_expiring',
+                    'hosting-'.$plan->order_id,
+                    'warning',
+                    'Renouvellement d’hébergement à prévoir',
+                    'L’offre '.$planName.' arrive à échéance le '.$plan->expires_at->format('d/m/Y').'.',
+                );
+            }
         }
 
         $activeFingerprints = [];

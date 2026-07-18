@@ -34,6 +34,31 @@ class HostingerApiClient
         return array_values($payload['data'] ?? $payload);
     }
 
+    /** @return array<int, array<string, mixed>> */
+    public function hostingOrders(): array
+    {
+        $orders = [];
+        $page = 1;
+
+        do {
+            $payload = $this->get('/api/hosting/v1/orders', ['page' => $page, 'per_page' => 100]);
+            $items = $payload['data'] ?? [];
+            $orders = array_merge($orders, is_array($items) ? $items : []);
+            $total = (int) ($payload['meta']['total'] ?? count($orders));
+            $page++;
+        } while (count($orders) < $total && $page <= 100);
+
+        return $orders;
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function subscriptions(): array
+    {
+        $payload = $this->get('/api/billing/v1/subscriptions');
+
+        return array_values($payload['data'] ?? $payload);
+    }
+
     /** @return array<string, mixed> */
     private function get(string $path, array $query = []): array
     {

@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             return;
         }
 
-        User::updateOrCreate(
+        User::firstOrCreate(
             ['email' => $email],
             [
                 'name' => env('ADMIN_NAME', 'Administrateur'),
