@@ -26,7 +26,10 @@ class LocalizationAndPwaTest extends TestCase
         $this->assertFileExists(public_path('icons/icon-192.png'));
         $this->assertFileExists(public_path('icons/icon-512.png'));
 
-        $manifest = $this->get('/manifest.webmanifest')
+        $manifest = $this->get('/manifest.webmanifest', [
+            'Accept' => 'application/manifest+json',
+            'Sec-Fetch-Dest' => 'manifest',
+        ])
             ->assertOk()
             ->assertHeader('content-type', 'application/manifest+json')
             ->json();
@@ -34,6 +37,11 @@ class LocalizationAndPwaTest extends TestCase
         $this->assertSame('Deploy Center', $manifest['name']);
         $this->assertSame('standalone', $manifest['display']);
         $this->assertSame('/dashboard', $manifest['start_url']);
+
+        $this->get('/manifest.webmanifest', [
+            'Accept' => 'text/html',
+            'Sec-Fetch-Dest' => 'document',
+        ])->assertRedirect('/login');
     }
 
     public function test_installer_contains_the_required_identity_fields(): void

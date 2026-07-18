@@ -1,8 +1,7 @@
-const CACHE_VERSION = 'deploy-center-v2';
+const CACHE_VERSION = 'deploy-center-v3';
 const OFFLINE_URL = '/offline.html';
 const INSTALL_ASSETS = [
     OFFLINE_URL,
-    '/manifest.webmanifest',
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/icon-maskable-512.png',
@@ -31,6 +30,10 @@ self.addEventListener('fetch', (event) => {
     }
 
     const requestUrl = new URL(event.request.url);
+
+    if (requestUrl.pathname === '/manifest.webmanifest') {
+        return;
+    }
 
     if (event.request.mode === 'navigate') {
         event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE_URL)));

@@ -78,9 +78,11 @@ Alpine.start();
 
 if ('serviceWorker' in navigator && (window.isSecureContext || ['localhost', '127.0.0.1'].includes(window.location.hostname))) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {
-            // Le tableau de bord reste disponible si le navigateur refuse le service worker.
-        });
+        navigator.serviceWorker.register('/sw.js?v=3', { updateViaCache: 'none' })
+            .then((registration) => registration.update())
+            .catch(() => {
+                // Le tableau de bord reste disponible si le navigateur refuse le service worker.
+            });
     });
 }
 

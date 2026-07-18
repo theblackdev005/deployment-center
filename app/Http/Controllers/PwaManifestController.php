@@ -3,11 +3,19 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class PwaManifestController extends Controller
 {
-    public function __invoke(): JsonResponse
+    public function __invoke(Request $request): JsonResponse|RedirectResponse
     {
+        if ($request->header('Sec-Fetch-Dest') === 'document' || $request->acceptsHtml()) {
+            return auth()->check()
+                ? redirect()->route('dashboard')
+                : redirect()->route('login');
+        }
+
         $name = config('app.name', 'Deploy Center');
 
         return response()->json([
@@ -31,6 +39,9 @@ class PwaManifestController extends Controller
                 ['name' => 'Clients et sites', 'short_name' => 'Sites', 'url' => '/clients-sites'],
                 ['name' => 'Parc Hostinger', 'short_name' => 'Hostinger', 'url' => '/hostinger'],
             ],
-        ], 200, ['Content-Type' => 'application/manifest+json']);
+        ], 200, [
+            'Content-Type' => 'application/manifest+json',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        ]);
     }
 }
