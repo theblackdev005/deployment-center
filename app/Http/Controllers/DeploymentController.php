@@ -61,8 +61,7 @@ class DeploymentController extends Controller
             return redirect()->route('deployments.show', $retry)
                 ->with('success', 'Le déploiement a été relancé avec succès.');
         } catch (Throwable $exception) {
-            return redirect()->route('deployments.show', $retry)
-                ->with('error', $exception->getMessage());
+            return redirect()->route('deployments.show', $retry);
         }
     }
 

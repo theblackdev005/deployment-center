@@ -233,11 +233,20 @@ class DeploymentRunner
 
     private function runProcess(array $command, string $workingDirectory, int $timeout = 300, array $environment = []): void
     {
+        $processHome = storage_path('app/private/process-home');
+        $composerHome = storage_path('app/private/composer');
+        $this->ensurePrivateDirectory($processHome);
+        $this->ensurePrivateDirectory($composerHome);
+
         $path = implode(PATH_SEPARATOR, array_unique(array_filter([
             dirname($this->phpCliBinary()),
             getenv('PATH') ?: null,
         ])));
-        $environment = array_merge(['PATH' => $path], $environment);
+        $environment = array_merge([
+            'PATH' => $path,
+            'HOME' => $processHome,
+            'COMPOSER_HOME' => $composerHome,
+        ], $environment);
         $process = new Process($command, $workingDirectory, $environment, null, $timeout);
         $process->run();
 
@@ -273,6 +282,15 @@ class DeploymentRunner
         }
 
         return null;
+    }
+
+    private function ensurePrivateDirectory(string $directory): void
+    {
+        if (! is_dir($directory) && ! mkdir($directory, 0700, true) && ! is_dir($directory)) {
+            throw new RuntimeException('Impossible de préparer l’environnement privé du déploiement.');
+        }
+
+        @chmod($directory, 0700);
     }
 
     private function readCommitHash(string $source): ?string
