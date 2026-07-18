@@ -74,7 +74,10 @@
                                     <p class="text-sm font-semibold text-slate-950">{{ $account->name }}</p>
                                     <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $state['class'] }}">{{ $state['label'] }}</span>
                                 </div>
-                                <p class="mt-1 text-xs text-slate-500">{{ $account->websites_count }} sites · {{ $account->domains_count }} domaines · {{ $account->subscriptions_count }} abonnements</p>
+                                <p class="mt-1 text-xs text-slate-500">{{ $account->domains_count }} domaines · {{ $account->websites_count }} sites détectés</p>
+                                @if ($account->open_alerts_count > 0)
+                                    <p class="mt-1 text-xs font-semibold text-red-700">{{ $account->open_alerts_count }} {{ $account->open_alerts_count > 1 ? 'problèmes détectés' : 'problème détecté' }}</p>
+                                @endif
                                 <p class="mt-1 text-xs text-slate-500">{{ $account->last_synced_at ? 'Actualisé le '.$account->last_synced_at->format('d/m/Y à H:i') : 'Jamais actualisé' }}</p>
                             </div>
                             <div class="flex flex-wrap gap-2">

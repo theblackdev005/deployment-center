@@ -27,8 +27,8 @@ class HostingerAccount extends Model
         return $this->hasMany(HostingerDomain::class);
     }
 
-    public function subscriptions(): HasMany
+    public function alerts(): HasMany
     {
-        return $this->hasMany(HostingerSubscription::class);
+        return $this->hasMany(HostingerAlert::class);
     }
 }

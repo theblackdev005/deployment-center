@@ -14,7 +14,11 @@ class HostingerAccountController extends Controller
     public function index(): View
     {
         return view('hostinger.accounts', [
-            'accounts' => HostingerAccount::withCount(['websites', 'domains', 'subscriptions'])
+            'accounts' => HostingerAccount::withCount([
+                'websites',
+                'domains',
+                'alerts as open_alerts_count' => fn ($query) => $query->where('status', 'open'),
+            ])
                 ->orderBy('name')
                 ->get(),
         ]);

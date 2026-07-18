@@ -3,11 +3,17 @@
 namespace Tests\Feature;
 
 use App\Models\HostingerAccount;
+use App\Models\HostingerAlert;
+use App\Models\HostingerDomain;
+use App\Models\HostingerWebsite;
 use App\Models\User;
+use App\Notifications\HostingerProblemDetected;
+use App\Services\HostingerAlertService;
 use App\Services\HostingerSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class HostingerSyncTest extends TestCase
@@ -27,7 +33,7 @@ class HostingerSyncTest extends TestCase
         $this->assertSame('hostinger-secret-token', $account->fresh()->api_token);
     }
 
-    public function test_sync_imports_websites_domains_subscriptions_and_php_version(): void
+    public function test_sync_imports_websites_and_domains(): void
     {
         Http::fake([
             '*/api/hosting/v1/websites*' => Http::response([
@@ -51,17 +57,6 @@ class HostingerSyncTest extends TestCase
                 'created_at' => '2025-01-01T00:00:00Z',
                 'expires_at' => '2027-01-01T00:00:00Z',
             ]]),
-            '*/api/billing/v1/subscriptions' => Http::response([[
-                'id' => 'subscription-1',
-                'name' => 'Hébergement Business',
-                'status' => 'active',
-                'is_auto_renewed' => true,
-                'expires_at' => '2027-01-01T00:00:00Z',
-            ]]),
-            '*/api/hosting/v1/accounts/u123456789/websites/example.com/php/details' => Http::response([
-                'php_version' => '8.3',
-                'php_version_full' => '8.3.30',
-            ]),
         ]);
 
         $account = HostingerAccount::create([
@@ -75,19 +70,48 @@ class HostingerSyncTest extends TestCase
             'hostinger_account_id' => $account->id,
             'domain' => 'example.com',
             'username' => 'u123456789',
-            'php_version_full' => '8.3.30',
         ]);
         $this->assertDatabaseHas('hostinger_domains', [
             'hostinger_account_id' => $account->id,
             'domain' => 'example.com',
             'status' => 'active',
         ]);
-        $this->assertDatabaseHas('hostinger_subscriptions', [
-            'hostinger_account_id' => $account->id,
-            'external_id' => 'subscription-1',
-            'is_auto_renewed' => true,
-        ]);
         $this->assertSame('connected', $account->fresh()->status);
+
+        $user = User::factory()->create();
+        $this->actingAs($user)->get(route('hostinger.index'))
+            ->assertOk()
+            ->assertSee('example.com')
+            ->assertSee('01/01/2025');
+    }
+
+    public function test_problems_create_one_admin_notification_until_their_state_changes(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->create();
+        $account = HostingerAccount::create([
+            'name' => 'Compte principal',
+            'api_token' => 'hostinger-secret-token',
+            'status' => 'connected',
+        ]);
+        HostingerDomain::create([
+            'hostinger_account_id' => $account->id,
+            'domain' => 'suspended-example.com',
+            'status' => 'suspended',
+        ]);
+        HostingerWebsite::create([
+            'hostinger_account_id' => $account->id,
+            'domain' => 'disabled-example.com',
+            'is_enabled' => false,
+        ]);
+
+        $service = app(HostingerAlertService::class);
+        $service->reconcile($account);
+        $service->reconcile($account->fresh());
+
+        $this->assertDatabaseCount('hostinger_alerts', 2);
+        $this->assertSame(2, HostingerAlert::where('status', 'open')->count());
+        $this->assertCount(2, Notification::sent($admin, HostingerProblemDetected::class));
     }
 
     public function test_hostinger_pages_require_authentication_and_tokens_are_not_flashed(): void

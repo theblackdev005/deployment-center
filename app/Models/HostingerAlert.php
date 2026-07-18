@@ -7,18 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
-    'hostinger_account_id', 'domain', 'username', 'client_id', 'order_id', 'vhost_type',
-    'root_directory', 'is_enabled', 'remote_created_at',
-    'last_synced_at',
+    'hostinger_account_id', 'domain', 'type', 'severity', 'title', 'message', 'status',
+    'fingerprint', 'detected_at', 'last_detected_at', 'notified_at', 'resolved_at',
 ])]
-class HostingerWebsite extends Model
+class HostingerAlert extends Model
 {
     protected function casts(): array
     {
         return [
-            'is_enabled' => 'boolean',
-            'remote_created_at' => 'datetime',
-            'last_synced_at' => 'datetime',
+            'detected_at' => 'datetime',
+            'last_detected_at' => 'datetime',
+            'notified_at' => 'datetime',
+            'resolved_at' => 'datetime',
         ];
     }
 
