@@ -37,11 +37,12 @@ class ServerController extends Controller
             'host' => ['required', 'string', 'max:255'],
             'port' => ['required', 'integer', 'between:1,65535'],
             'username' => ['required', 'string', 'max:100'],
-            'base_path' => ['nullable', 'string', 'max:500'],
-            'ssh_key_path' => ['nullable', 'string', 'max:500'],
         ]);
 
-        Server::create($validated);
+        Server::create([
+            ...$validated,
+            'base_path' => '/home/'.$validated['username'].'/domains',
+        ]);
 
         return back()->with('success', 'Serveur ajouté.');
     }

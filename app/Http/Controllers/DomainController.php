@@ -38,11 +38,15 @@ class DomainController extends Controller
         $validated = $request->validate([
             'server_id' => ['required', 'exists:servers,id'],
             'name' => ['required', 'string', 'max:255', 'unique:domains,name'],
-            'document_root' => ['required', 'string', 'max:500'],
         ]);
 
         $validated['name'] = Str::lower(trim($validated['name']));
-        Domain::create($validated);
+        $server = Server::findOrFail($validated['server_id']);
+
+        Domain::create([
+            ...$validated,
+            'document_root' => rtrim($server->base_path, '/').'/'.$validated['name'].'/public_html',
+        ]);
 
         return back()->with('success', 'Domaine ajouté.');
     }

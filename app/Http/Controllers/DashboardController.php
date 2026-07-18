@@ -21,6 +21,8 @@ class DashboardController extends Controller
                 ->latest()
                 ->limit(8)
                 ->get(),
+            'projects' => Project::where('is_active', true)->orderBy('name')->get(),
+            'domains' => Domain::with('server')->orderBy('name')->get(),
         ]);
     }
 }

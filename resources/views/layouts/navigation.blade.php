@@ -10,10 +10,8 @@
                 <div class="hidden items-center gap-1 md:flex">
                     @foreach ([
                         ['route' => 'dashboard', 'label' => 'Vue d’ensemble', 'match' => 'dashboard'],
-                        ['route' => 'projects.index', 'label' => 'Projets', 'match' => 'projects.*'],
-                        ['route' => 'servers.index', 'label' => 'Serveurs', 'match' => 'servers.*'],
-                        ['route' => 'domains.index', 'label' => 'Domaines', 'match' => 'domains.*'],
                         ['route' => 'deployments.index', 'label' => 'Déploiements', 'match' => 'deployments.*'],
+                        ['route' => 'setup.index', 'label' => 'Configuration', 'match' => 'setup.*'],
                     ] as $item)
                         <a href="{{ route($item['route']) }}"
                            class="rounded-md px-3 py-2 text-sm font-medium {{ request()->routeIs($item['match']) ? 'bg-slate-100 text-slate-950' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950' }}">
@@ -55,10 +53,8 @@
     <div x-show="open" x-cloak class="border-t border-slate-200 px-4 py-3 md:hidden">
         <div class="space-y-1">
             <a href="{{ route('dashboard') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Vue d’ensemble</a>
-            <a href="{{ route('projects.index') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Projets</a>
-            <a href="{{ route('servers.index') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Serveurs</a>
-            <a href="{{ route('domains.index') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Domaines</a>
             <a href="{{ route('deployments.index') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Déploiements</a>
+            <a href="{{ route('setup.index') }}" class="block rounded-md px-3 py-2 text-sm font-medium text-slate-700">Configuration</a>
             <a href="{{ route('deployments.create') }}" class="mt-2 block rounded-md bg-emerald-600 px-3 py-2 text-center text-sm font-semibold text-white">Nouveau déploiement</a>
         </div>
         <form method="POST" action="{{ route('logout') }}" class="mt-3 border-t border-slate-200 pt-3">

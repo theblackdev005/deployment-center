@@ -10,7 +10,7 @@
         <section class="min-w-0">
             <div class="border-b border-slate-200 pb-3">
                 <h2 class="text-base font-semibold text-slate-950">Connexions enregistrées</h2>
-                <p class="mt-1 text-sm text-slate-500">Les clés privées restent hors de la base de données.</p>
+                <p class="mt-1 text-sm text-slate-500">Cette connexion est configurée une seule fois.</p>
             </div>
             <div class="mt-4 space-y-3">
                 @forelse ($servers as $server)
@@ -37,18 +37,16 @@
             <form method="POST" action="{{ route('servers.store') }}" class="rounded-md border border-slate-200 bg-white p-5">
                 @csrf
                 <h2 class="text-base font-semibold text-slate-950">Ajouter un serveur</h2>
-                <p class="mt-1 text-sm text-slate-500">Connexion SSH dédiée aux déploiements.</p>
+                <p class="mt-1 text-sm text-slate-500">Utilisez les informations SSH indiquées dans Hostinger.</p>
                 <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
                     @foreach ([
                         ['name' => 'name', 'label' => 'Nom', 'value' => old('name'), 'placeholder' => 'Hostinger principal'],
                         ['name' => 'host', 'label' => 'Adresse du serveur', 'value' => old('host'), 'placeholder' => '82.25.113.52'],
                         ['name' => 'username', 'label' => 'Utilisateur SSH', 'value' => old('username'), 'placeholder' => 'u123456789'],
-                        ['name' => 'base_path', 'label' => 'Chemin de base', 'value' => old('base_path'), 'placeholder' => '/home/u123456789/domains'],
-                        ['name' => 'ssh_key_path', 'label' => 'Chemin de la clé SSH', 'value' => old('ssh_key_path'), 'placeholder' => '/secure/keys/hostinger'],
                     ] as $field)
                         <div>
                             <label for="{{ $field['name'] }}" class="text-sm font-medium text-slate-700">{{ $field['label'] }}</label>
-                            <input id="{{ $field['name'] }}" name="{{ $field['name'] }}" value="{{ $field['value'] }}" {{ in_array($field['name'], ['name', 'host', 'username']) ? 'required' : '' }} class="mt-1 block w-full rounded-md border-slate-300 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="{{ $field['placeholder'] }}">
+                            <input id="{{ $field['name'] }}" name="{{ $field['name'] }}" value="{{ $field['value'] }}" required class="mt-1 block w-full rounded-md border-slate-300 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="{{ $field['placeholder'] }}">
                             <x-input-error :messages="$errors->get($field['name'])" class="mt-2" />
                         </div>
                     @endforeach

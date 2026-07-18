@@ -10,7 +10,7 @@
         <section class="min-w-0">
             <div class="border-b border-slate-200 pb-3">
                 <h2 class="text-base font-semibold text-slate-950">Projets enregistrés</h2>
-                <p class="mt-1 text-sm text-slate-500">Les dépôts utilisés pour préparer les versions à publier.</p>
+                <p class="mt-1 text-sm text-slate-500">Ajoutez simplement le lien GitHub de chaque projet.</p>
             </div>
 
             <div class="mt-4 space-y-3">
@@ -42,7 +42,7 @@
             <form method="POST" action="{{ route('projects.store') }}" class="rounded-md border border-slate-200 bg-white p-5">
                 @csrf
                 <h2 class="text-base font-semibold text-slate-950">Ajouter un projet</h2>
-                <p class="mt-1 text-sm text-slate-500">Indiquez le dépôt Git utilisé comme source.</p>
+                <p class="mt-1 text-sm text-slate-500">La branche principale sera utilisée automatiquement.</p>
 
                 <div class="mt-5 space-y-4">
                     <div>
@@ -54,11 +54,6 @@
                         <label for="repository_url" class="text-sm font-medium text-slate-700">URL du dépôt GitHub</label>
                         <input id="repository_url" name="repository_url" type="url" value="{{ old('repository_url') }}" required class="mt-1 block w-full rounded-md border-slate-300 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="https://github.com/...">
                         <x-input-error :messages="$errors->get('repository_url')" class="mt-2" />
-                    </div>
-                    <div>
-                        <label for="branch" class="text-sm font-medium text-slate-700">Branche</label>
-                        <input id="branch" name="branch" value="{{ old('branch', 'main') }}" required class="mt-1 block w-full rounded-md border-slate-300 text-sm focus:border-emerald-500 focus:ring-emerald-500">
-                        <x-input-error :messages="$errors->get('branch')" class="mt-2" />
                     </div>
                 </div>
 

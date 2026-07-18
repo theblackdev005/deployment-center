@@ -36,12 +36,12 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'repository_url' => ['required', 'url', 'max:500'],
-            'branch' => ['required', 'string', 'max:100'],
         ]);
 
         Project::create([
             ...$validated,
             'slug' => Str::slug($validated['name']).'-'.Str::lower(Str::random(5)),
+            'branch' => 'main',
             'excluded_paths' => ['.git', '.env', 'storage/logs/*', 'storage/framework/sessions/*'],
         ]);
 

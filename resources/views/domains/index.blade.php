@@ -10,7 +10,7 @@
         <section class="min-w-0">
             <div class="border-b border-slate-200 pb-3">
                 <h2 class="text-base font-semibold text-slate-950">Domaines enregistrés</h2>
-                <p class="mt-1 text-sm text-slate-500">Chaque domaine est associé à son serveur et à son dossier cible.</p>
+                <p class="mt-1 text-sm text-slate-500">Le dossier de publication est calculé automatiquement.</p>
             </div>
             <div class="mt-4 space-y-3">
                 @forelse ($domains as $domain)
@@ -40,7 +40,7 @@
             <form method="POST" action="{{ route('domains.store') }}" class="rounded-md border border-slate-200 bg-white p-5">
                 @csrf
                 <h2 class="text-base font-semibold text-slate-950">Ajouter un domaine</h2>
-                <p class="mt-1 text-sm text-slate-500">Indiquez le dossier exact `public_html`.</p>
+                <p class="mt-1 text-sm text-slate-500">Choisissez l’hébergement puis saisissez le domaine.</p>
                 <div class="mt-5 space-y-4">
                     <div>
                         <label for="server_id" class="text-sm font-medium text-slate-700">Serveur</label>
@@ -56,11 +56,6 @@
                         <label for="name" class="text-sm font-medium text-slate-700">Nom de domaine</label>
                         <input id="name" name="name" value="{{ old('name') }}" required class="mt-1 block w-full rounded-md border-slate-300 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="exemple.com">
                         <x-input-error :messages="$errors->get('name')" class="mt-2" />
-                    </div>
-                    <div>
-                        <label for="document_root" class="text-sm font-medium text-slate-700">Dossier cible</label>
-                        <input id="document_root" name="document_root" value="{{ old('document_root') }}" required class="mt-1 block w-full rounded-md border-slate-300 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="/home/.../domains/exemple.com/public_html">
-                        <x-input-error :messages="$errors->get('document_root')" class="mt-2" />
                     </div>
                 </div>
                 <button class="mt-5 w-full rounded-md bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700" @disabled($servers->isEmpty())>Ajouter le domaine</button>

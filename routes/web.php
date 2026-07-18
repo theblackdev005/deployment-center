@@ -6,6 +6,7 @@ use App\Http\Controllers\DomainController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ServerController;
+use App\Http\Controllers\SetupController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -16,6 +17,7 @@ Route::get('/', function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/configuration', SetupController::class)->name('setup.index');
     Route::resource('projects', ProjectController::class)->only(['index', 'store', 'destroy']);
     Route::resource('servers', ServerController::class)->only(['index', 'store', 'destroy']);
     Route::resource('domains', DomainController::class)->only(['index', 'store', 'destroy']);
