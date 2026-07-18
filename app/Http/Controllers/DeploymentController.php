@@ -39,6 +39,33 @@ class DeploymentController extends Controller
         ]);
     }
 
+    public function retry(Request $request, Deployment $deployment, DeploymentRunner $runner): RedirectResponse
+    {
+        if (! in_array($deployment->status, ['failed', 'pending'], true)) {
+            return redirect()->route('deployments.show', $deployment)
+                ->with('error', 'Ce déploiement ne peut pas être relancé dans son état actuel.');
+        }
+
+        $retry = Deployment::create([
+            'project_id' => $deployment->project_id,
+            'domain_id' => $deployment->domain_id,
+            'user_id' => $request->user()->id,
+            'status' => 'pending',
+        ]);
+
+        set_time_limit(0);
+
+        try {
+            $runner->run($retry);
+
+            return redirect()->route('deployments.show', $retry)
+                ->with('success', 'Le déploiement a été relancé avec succès.');
+        } catch (Throwable $exception) {
+            return redirect()->route('deployments.show', $retry)
+                ->with('error', $exception->getMessage());
+        }
+    }
+
     public function store(
         Request $request,
         SshCommandParser $parser,

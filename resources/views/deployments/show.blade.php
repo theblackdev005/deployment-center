@@ -5,7 +5,15 @@
                 <p class="text-sm font-medium text-emerald-700">Déploiement #{{ $deployment->id }}</p>
                 <h1 class="mt-1 text-2xl font-semibold text-slate-950">{{ $deployment->project->name }} vers {{ $deployment->domain->name }}</h1>
             </div>
-            <a href="{{ route('deployments.index') }}" class="text-sm font-semibold text-slate-600 hover:text-slate-900">Retour à l’historique</a>
+            <div class="flex flex-wrap items-center gap-3">
+                @if (in_array($deployment->status, ['failed', 'pending'], true))
+                    <form method="POST" action="{{ route('deployments.retry', $deployment) }}" onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').textContent = 'Relance en cours...';">
+                        @csrf
+                        <button type="submit" class="inline-flex min-h-10 items-center justify-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60">Relancer</button>
+                    </form>
+                @endif
+                <a href="{{ route('deployments.index') }}" class="text-sm font-semibold text-slate-600 hover:text-slate-900">Retour à l’historique</a>
+            </div>
         </div>
     </x-slot>
 
