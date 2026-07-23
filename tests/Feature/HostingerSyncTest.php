@@ -185,6 +185,43 @@ class HostingerSyncTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_inventory_displays_the_real_resource_statuses(): void
+    {
+        Carbon::setTestNow('2026-07-23 12:00:00');
+        $user = User::factory()->create();
+        $account = HostingerAccount::create([
+            'name' => 'Compte principal',
+            'api_token' => 'hostinger-secret-token',
+            'status' => 'connected',
+        ]);
+
+        HostingerDomain::create([
+            'hostinger_account_id' => $account->id,
+            'domain' => 'suspended-example.com',
+            'status' => 'suspended',
+            'expires_at' => now()->addYear(),
+        ]);
+        HostingerDomain::create([
+            'hostinger_account_id' => $account->id,
+            'domain' => 'expired-example.com',
+            'status' => 'expired',
+            'expires_at' => now()->subDay(),
+        ]);
+        HostingerWebsite::create([
+            'hostinger_account_id' => $account->id,
+            'domain' => 'disabled-example.com',
+            'is_enabled' => false,
+        ]);
+
+        $this->actingAs($user)->get(route('hostinger.index'))
+            ->assertOk()
+            ->assertSee('Suspendu')
+            ->assertSee('Expiré')
+            ->assertSee('Site désactivé');
+
+        Carbon::setTestNow();
+    }
+
     public function test_hostinger_pages_require_authentication_and_tokens_are_not_flashed(): void
     {
         $this->get(route('hostinger.index'))->assertRedirect(route('login'));

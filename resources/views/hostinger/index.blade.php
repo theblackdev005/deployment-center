@@ -254,9 +254,26 @@
                                 $website = $row['website'];
                                 $deployment = $row['deployment'];
                                 $status = strtolower((string) ($registration?->status ?? ''));
-                                $hasProblem = in_array($status, ['expired', 'suspended', 'failed'], true) || ($website && ! $website->is_enabled);
+                                $isExpired = $status === 'expired' || $registration?->expires_at?->isPast();
+                                $isSuspended = $status === 'suspended';
+                                $hasFailed = $status === 'failed';
+                                $websiteDisabled = $website && ! $website->is_enabled;
+                                $hasProblem = $isExpired || $isSuspended || $hasFailed || $websiteDisabled;
                                 $expiresSoon = $registration?->expires_at?->isBetween(now(), now()->addMonthsNoOverflow($expirationNoticeMonths));
                                 $accountPaused = ! $row['account']->is_active;
+
+                                $resourceStatus = match (true) {
+                                    $accountPaused => ['label' => 'En pause', 'class' => 'bg-slate-100 text-slate-700', 'icon' => 'pause'],
+                                    $isExpired => ['label' => 'Expiré', 'class' => 'bg-red-100 text-red-800', 'icon' => null],
+                                    $isSuspended => ['label' => 'Suspendu', 'class' => 'bg-red-100 text-red-800', 'icon' => null],
+                                    $hasFailed => ['label' => 'Erreur Hostinger', 'class' => 'bg-red-100 text-red-800', 'icon' => null],
+                                    $websiteDisabled => ['label' => 'Site désactivé', 'class' => 'bg-red-100 text-red-800', 'icon' => null],
+                                    $expiresSoon => ['label' => 'À renouveler', 'class' => 'bg-amber-100 text-amber-800', 'icon' => null],
+                                    $status === 'pending' => ['label' => 'En attente', 'class' => 'bg-amber-100 text-amber-800', 'icon' => null],
+                                    $website?->is_enabled => ['label' => 'Actif', 'class' => 'bg-emerald-100 text-emerald-800', 'icon' => null],
+                                    $status === 'active' => ['label' => 'Domaine actif', 'class' => 'bg-emerald-100 text-emerald-800', 'icon' => null],
+                                    default => ['label' => 'Enregistré', 'class' => 'bg-slate-100 text-slate-700', 'icon' => null],
+                                };
                             @endphp
                             <article
                                 x-show="visible(@js($row['domain']), @js($row['account']->id), @js($row['is_subdomain']))"
@@ -304,20 +321,12 @@
                                     @endif
                                 </div>
                                 <div>
-                                    @if ($accountPaused)
-                                        <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">
-                                            <i data-lucide="pause" class="h-3.5 w-3.5" aria-hidden="true"></i>
-                                            En pause
-                                        </span>
-                                    @elseif ($hasProblem)
-                                        <span class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-800">À vérifier</span>
-                                    @elseif ($expiresSoon)
-                                        <span class="inline-flex rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-800">À renouveler</span>
-                                    @elseif ($website?->is_enabled)
-                                        <span class="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">Actif</span>
-                                    @else
-                                        <span class="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700">Enregistré</span>
-                                    @endif
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold {{ $resourceStatus['class'] }}">
+                                        @if ($resourceStatus['icon'])
+                                            <i data-lucide="{{ $resourceStatus['icon'] }}" class="h-3.5 w-3.5" aria-hidden="true"></i>
+                                        @endif
+                                        {{ $resourceStatus['label'] }}
+                                    </span>
                                 </div>
                             </article>
                         @endforeach
