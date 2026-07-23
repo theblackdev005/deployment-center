@@ -100,6 +100,10 @@
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 @if ($account->is_active)
+                                    <a href="{{ route('hostinger.index', ['account' => $account->id]) }}#domains" class="ui-button-primary">
+                                        <i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>
+                                        Ouvrir
+                                    </a>
                                     <form method="POST" action="{{ route('hostinger.accounts.sync', $account) }}">
                                         @csrf
                                         <button class="ui-button-secondary"><i data-lucide="refresh-cw" class="h-4 w-4" aria-hidden="true"></i>Actualiser</button>

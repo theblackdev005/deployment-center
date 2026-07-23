@@ -1,4 +1,13 @@
 <x-app-layout>
+    @php
+        $requestedAccountId = (string) request()->query('account', '');
+        $selectedAccountId = $accounts->where('is_active', true)->contains(fn ($account) => (string) $account->id === $requestedAccountId)
+            ? $requestedAccountId
+            : (string) $accounts->where('is_active', true)->first()?->id;
+        $domainAccountFilter = $requestedAccountId === $selectedAccountId && $requestedAccountId !== ''
+            ? $requestedAccountId
+            : 'all';
+    @endphp
     <x-slot name="header">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -70,7 +79,7 @@
 
             <section
                 class="ui-panel mt-5 overflow-hidden"
-                x-data="{ selectedAccount: '{{ $accounts->where('is_active', true)->first()?->id }}' }"
+                x-data="{ selectedAccount: @js($selectedAccountId) }"
             >
                 <div class="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -189,9 +198,9 @@
                 </section>
             @endif
 
-            <section class="mt-6" x-data="{
+            <section id="domains" class="mt-6 scroll-mt-5" x-data="{
                 search: '',
-                account: 'all',
+                account: @js($domainAccountFilter),
                 showSubdomains: false,
                 visible(domain, accountId, isSubdomain) {
                     const matchesText = domain.toLowerCase().includes(this.search.toLowerCase().trim());

@@ -285,6 +285,16 @@ class HostingerSyncTest extends TestCase
             ->assertSee('10/01/2027')
             ->assertSee('20/02/2027')
             ->assertSee('Choisissez le compte Hostinger que vous souhaitez consulter.');
+
+        $this->actingAs($user)->get(route('hostinger.accounts.index'))
+            ->assertOk()
+            ->assertSee('Ouvrir')
+            ->assertSee(route('hostinger.index', ['account' => $first->id]).'#domains', false)
+            ->assertSee(route('hostinger.index', ['account' => $second->id]).'#domains', false);
+
+        $this->actingAs($user)->get(route('hostinger.index', ['account' => $second->id]))
+            ->assertOk()
+            ->assertSee("account: '".$second->id."'", false);
     }
 
     public function test_account_can_be_paused_and_reactivated_without_losing_its_data(): void
