@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Deployment;
 use App\Models\HostingerAccount;
 use App\Models\HostingerAlert;
 use App\Models\HostingerDomain;
@@ -66,18 +65,11 @@ class HostingerAccountController extends Controller
         $registrations = HostingerDomain::where('hostinger_account_id', $hostingerAccount->id)->get()->keyBy('domain');
         $websites = HostingerWebsite::where('hostinger_account_id', $hostingerAccount->id)->get()->keyBy('domain');
         $domainNames = $registrations->keys()->merge($websites->keys())->unique()->sort()->values();
-        $latestDeployments = Deployment::with(['project', 'domain'])
-            ->whereHas('domain', fn ($query) => $query->whereIn('name', $domainNames))
-            ->latest('id')
-            ->get()
-            ->unique(fn (Deployment $deployment) => $deployment->domain->name)
-            ->keyBy(fn (Deployment $deployment) => $deployment->domain->name);
 
         $domains = $domainNames->map(fn (string $domain): array => [
             'domain' => $domain,
             'registration' => $registrations->get($domain),
             'website' => $websites->get($domain),
-            'deployment' => $latestDeployments->get($domain),
         ]);
 
         return view('hostinger.account-domains', [
