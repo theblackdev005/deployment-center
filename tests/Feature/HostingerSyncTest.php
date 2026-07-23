@@ -289,12 +289,13 @@ class HostingerSyncTest extends TestCase
         $this->actingAs($user)->get(route('hostinger.accounts.index'))
             ->assertOk()
             ->assertSee('Ouvrir')
-            ->assertSee(route('hostinger.index', ['account' => $first->id]).'#domains', false)
-            ->assertSee(route('hostinger.index', ['account' => $second->id]).'#domains', false);
+            ->assertSee(route('hostinger.accounts.domains', $first), false)
+            ->assertSee(route('hostinger.accounts.domains', $second), false);
 
-        $this->actingAs($user)->get(route('hostinger.index', ['account' => $second->id]))
+        $this->actingAs($user)->get(route('hostinger.accounts.domains', $second))
             ->assertOk()
-            ->assertSee("account: '".$second->id."'", false);
+            ->assertSee('Retour aux comptes')
+            ->assertSee('Tous les domaines rattachés à ce compte Hostinger.');
     }
 
     public function test_account_can_be_paused_and_reactivated_without_losing_its_data(): void

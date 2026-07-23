@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Deployment;
 use App\Models\HostingerAccount;
 use App\Models\HostingerAlert;
+use App\Models\HostingerDomain;
+use App\Models\HostingerWebsite;
 use App\Services\HostingerSyncService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,6 +54,42 @@ class HostingerAccountController extends Controller
             return redirect()->route('hostinger.accounts.index')
                 ->with('error', $exception->getMessage());
         }
+    }
+
+    public function domains(HostingerAccount $hostingerAccount): View|RedirectResponse
+    {
+        if (! $hostingerAccount->is_active) {
+            return redirect()->route('hostinger.accounts.index')
+                ->with('error', 'Réactivez ce compte Hostinger pour consulter ses domaines.');
+        }
+
+        $hostingerAccount->load([
+            'hostingPlans' => fn ($query) => $query->whereNotNull('expires_at')->orderBy('expires_at'),
+        ])->loadCount(['domains', 'websites']);
+
+        $registrations = HostingerDomain::where('hostinger_account_id', $hostingerAccount->id)->get()->keyBy('domain');
+        $websites = HostingerWebsite::where('hostinger_account_id', $hostingerAccount->id)->get()->keyBy('domain');
+        $domainNames = $registrations->keys()->merge($websites->keys())->unique()->sort()->values();
+        $latestDeployments = Deployment::with(['project', 'domain'])
+            ->whereHas('domain', fn ($query) => $query->whereIn('name', $domainNames))
+            ->latest('id')
+            ->get()
+            ->unique(fn (Deployment $deployment) => $deployment->domain->name)
+            ->keyBy(fn (Deployment $deployment) => $deployment->domain->name);
+
+        $domains = $domainNames->map(fn (string $domain): array => [
+            'domain' => $domain,
+            'registration' => $registrations->get($domain),
+            'website' => $websites->get($domain),
+            'deployment' => $latestDeployments->get($domain),
+        ]);
+
+        return view('hostinger.account-domains', [
+            'account' => $hostingerAccount,
+            'domains' => $domains,
+            'nextPlan' => $hostingerAccount->hostingPlans->first(fn ($plan) => $plan->expires_at?->isFuture()),
+            'expirationNoticeMonths' => (int) config('services.hostinger.expiration_notice_months', 2),
+        ]);
     }
 
     public function update(Request $request, HostingerAccount $hostingerAccount): RedirectResponse

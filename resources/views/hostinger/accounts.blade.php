@@ -100,7 +100,7 @@
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 @if ($account->is_active)
-                                    <a href="{{ route('hostinger.index', ['account' => $account->id]) }}#domains" class="ui-button-primary">
+                                    <a href="{{ route('hostinger.accounts.domains', $account) }}" class="ui-button-primary">
                                         <i data-lucide="eye" class="h-4 w-4" aria-hidden="true"></i>
                                         Ouvrir
                                     </a>

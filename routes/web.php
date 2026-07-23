@@ -38,6 +38,7 @@ Route::middleware(['auth', 'verified', 'two-factor.configured'])->group(function
     Route::patch('/managed-sites/{managedSite}', [ClientSiteController::class, 'updateSite'])->name('managed-sites.update');
     Route::delete('/managed-sites/{managedSite}', [ClientSiteController::class, 'destroySite'])->name('managed-sites.destroy');
     Route::get('/hostinger/accounts', [HostingerAccountController::class, 'index'])->name('hostinger.accounts.index');
+    Route::get('/hostinger/accounts/{hostingerAccount}/domains', [HostingerAccountController::class, 'domains'])->name('hostinger.accounts.domains');
     Route::post('/hostinger/accounts', [HostingerAccountController::class, 'store'])->name('hostinger.accounts.store');
     Route::patch('/hostinger/accounts/{hostingerAccount}', [HostingerAccountController::class, 'update'])->name('hostinger.accounts.update');
     Route::patch('/hostinger/accounts/{hostingerAccount}/status', [HostingerAccountController::class, 'updateStatus'])->name('hostinger.accounts.status');
