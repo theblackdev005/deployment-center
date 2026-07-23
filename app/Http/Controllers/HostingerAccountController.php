@@ -63,10 +63,6 @@ class HostingerAccountController extends Controller
                 ->with('error', 'Réactivez ce compte Hostinger pour consulter ses domaines.');
         }
 
-        $hostingerAccount->load([
-            'hostingPlans' => fn ($query) => $query->whereNotNull('expires_at')->orderBy('expires_at'),
-        ])->loadCount(['domains', 'websites']);
-
         $registrations = HostingerDomain::where('hostinger_account_id', $hostingerAccount->id)->get()->keyBy('domain');
         $websites = HostingerWebsite::where('hostinger_account_id', $hostingerAccount->id)->get()->keyBy('domain');
         $domainNames = $registrations->keys()->merge($websites->keys())->unique()->sort()->values();
@@ -87,7 +83,6 @@ class HostingerAccountController extends Controller
         return view('hostinger.account-domains', [
             'account' => $hostingerAccount,
             'domains' => $domains,
-            'nextPlan' => $hostingerAccount->hostingPlans->first(fn ($plan) => $plan->expires_at?->isFuture()),
             'expirationNoticeMonths' => (int) config('services.hostinger.expiration_notice_months', 2),
         ]);
     }

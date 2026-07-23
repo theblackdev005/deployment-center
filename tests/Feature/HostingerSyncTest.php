@@ -294,8 +294,8 @@ class HostingerSyncTest extends TestCase
 
         $this->actingAs($user)->get(route('hostinger.accounts.domains', $second))
             ->assertOk()
-            ->assertSee('Retour aux comptes')
-            ->assertSee('Tous les domaines rattachés à ce compte Hostinger.');
+            ->assertSee('Retour')
+            ->assertSee('Domaines du compte');
     }
 
     public function test_account_can_be_paused_and_reactivated_without_losing_its_data(): void
